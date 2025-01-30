@@ -1,0 +1,1 @@
+The implementation of CMoS. The main function locates in Pipeline/OneMulEdit.py. Currently, the config is set for the Electricity Dataset. You can download Electricity dataset to the data folder to run the experiments. Configs for all datasets will be added soon.
