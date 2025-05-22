@@ -20,39 +20,38 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
     
-    from model.CMoS import Model_edit
+    from model.CMoS import Model
     model_name = "CMoS"
-    
-    config = toml.load("../model/{}/config.toml".format(model_name))["config"]
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--pred_len', type=int)
+    parser.add_argument('--dataset', type=str)
     cmdargs = parser.parse_args()
+    dataset = cmdargs.dataset
+
+    config = toml.load("./configs/{}.toml".format(dataset))["config"]
     
     config["pred_len"] = cmdargs.pred_len
-    
     args = argparse.Namespace(**config)
     
-    model = Model_edit.Model(args)
+    model = Model.Model(args)
     
-    summary(model, input_size=(1, args.seq_len, args.c))
+    # summary(model, input_size=(1, args.seq_len, args.c))
     
-    if not os.path.exists("../model/{}/cpkt/".format(model_name)):
-        os.mkdir("../model/{}/cpkt/".format(model_name))
+    if not os.path.exists("./model/{}/cpkt/".format(model_name)):
+        os.mkdir("./model/{}/cpkt/".format(model_name))
     
     # define optimizer and step_size
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     schedular = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
     
     criterion = nn.MSELoss()
+    comment = f"{dataset}-{args.pred_len}"
     
-    dataset = ["electricity"]
-    comment = f"{dataset[0]}-edit-{args.pred_len}"
+    if not os.path.exists("./model/{}/cpkt/{}".format(model_name, comment)):
+        os.mkdir("./model/{}/cpkt/{}".format(model_name, comment))
     
-    if not os.path.exists("../model/{}/cpkt/{}".format(model_name, comment)):
-        os.mkdir("../model/{}/cpkt/{}".format(model_name, comment))
-    
-    with open(f"../model/{model_name}/cpkt/{comment}/config.toml", "w") as f:
+    with open(f"./model/{model_name}/cpkt/{comment}/config.toml", "w") as f:
         toml.dump({"config": config}, f)
     
-    train_oneset_mts(model, args, optimizer, schedular, criterion, dataset, model_save_path=f"../model/{model_name}/cpkt/{comment}")
+    train_oneset_mts(model, args, optimizer, schedular, criterion, [dataset], model_save_path=f"./model/{model_name}/cpkt/{comment}")

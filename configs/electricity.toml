@@ -13,5 +13,5 @@ lr = 0.0008
 batch_size = 64
 step_size = 20
 gamma = 0.75
-use_pi = false
+use_pi = true
 period = 168

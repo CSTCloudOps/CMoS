@@ -8,7 +8,7 @@ import os
 def read_sets(sets):
     array_list = []
     for one_set in sets:
-        datas = np.load("../data/{}.npz".format(one_set))
+        datas = np.load("./data/{}.npz".format(one_set))
         array_names = datas.files
         for array_name in array_names:
             array_list.append(datas[array_name])

@@ -20,12 +20,7 @@ class Model(nn.Module):
         
         
         self.conv_dim = (configs.seq_len - self.kernel_size) // self.conv_stride + 1
-        
-        # == MoE ==
-        # self.ds_conv = nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(1, self.kernel_size), stride=(1, self.conv_stride))
-        # self.gates = nn.Linear(self.conv_dim, self.num_map)
-        
-        # == MMoE ==
+
         self.ds_convs = nn.ModuleList(
             [nn.Conv1d(in_channels=1, out_channels=1, kernel_size=self.kernel_size, stride=self.conv_stride)
             for _ in range(self.c)]
@@ -49,7 +44,6 @@ class Model(nn.Module):
             torch.var(x, dim=2, keepdim=True, unbiased=False) + 1e-10)
         x /= stdev
         
-        # conv_out = self.ds_conv(x.unsqueeze(1))
         conv_outs = [
             self.ds_convs[i](x[:,i,:].unsqueeze(1))
             for i in range(self.c)

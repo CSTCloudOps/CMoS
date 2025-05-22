@@ -1,17 +1,16 @@
 [config]
 seq_len = 720
 pred_len = 96
-seg_size = 8
-dropout = 0.05
+seg_size = 4
+dropout = 0.0008
 num_map = 4
-kernel_size = 8
-conv_stride = 4
-c = 321
-topk = -1
+kernel_size = 4
+conv_stride = 2
+c = 21
 epochs = 200
 lr = 0.0008
 batch_size = 64
 step_size = 20
 gamma = 0.75
+period = 144
 use_pi = false
-period = 168

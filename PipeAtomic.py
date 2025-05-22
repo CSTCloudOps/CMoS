@@ -12,19 +12,21 @@ import toml
 import time
 import itertools
 
+from utils import EarlyStoppingBySlope
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger('my_logger')
 
-def fix_seed(seed=None):
-    if not seed:
-        seed = random.randint(1, 10000)
-    print("seed is %d" %seed)
+# def fix_seed(seed=None):
+#     if not seed:
+#         seed = random.randint(1, 10000)
+#     print("seed is %d" %seed)
 
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    np.random.seed(seed)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
+#     torch.manual_seed(seed)
+#     torch.cuda.manual_seed(seed)
+#     np.random.seed(seed)
+#     torch.backends.cudnn.benchmark = False
+#     torch.backends.cudnn.deterministic = True
 
 def set_logger(model_save_path):
     folder_path = model_save_path
@@ -51,115 +53,6 @@ else:
     device = torch.device("cpu")
     print("=== Using CPU ===")
 
-
-def train_oneset(model, config, optimizer, schedular, criterion, dataset, model_save_path, dtype=torch.float32):
-    """
-    config(args):
-        seq_len: int
-        pred_len: int
-        epochs: int
-        batch_size: int
-    """
-    if model_save_path:
-        set_logger(model_save_path)
-    logger.info(f">>> One set {dataset} train phase")
-    
-    model = model.to(device).to(dtype)
-    if torch.cuda.device_count() > 1:
-        print("Using", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
-    
-    if dataset[0][:3] == "ETT":
-        train_prop = 0.6
-        valid_prop = 0.2
-    
-    else:
-        train_prop = 0.7
-        valid_prop = 0.1
-    
-    train_loader = torch.utils.data.DataLoader(
-        UnivDataset(dataset, config.seq_len, config.pred_len, phase="train", train_prop=train_prop, valid_prop=valid_prop), 
-        batch_size=config.batch_size, 
-        shuffle=True,
-        num_workers=8
-    )
-    
-    valid_loader = torch.utils.data.DataLoader(
-        UnivDataset(dataset, config.seq_len, config.pred_len, phase="valid", train_prop=train_prop, valid_prop=valid_prop), 
-        batch_size=config.batch_size * 2, 
-        shuffle=False
-    )
-    
-    test_loader = torch.utils.data.DataLoader(
-        UnivDataset(dataset, config.seq_len, config.pred_len, phase="test", train_prop=train_prop, valid_prop=valid_prop), 
-        batch_size=config.batch_size * 2, 
-        shuffle=False
-    )
-    
-    if not os.path.exists(model_save_path):
-        os.makedirs(model_save_path)
-
-    for epoch in range(config.epochs):
-        model.train(mode=True)
-        train_loss, valid_loss, avg_loss = 0,0,0
-        
-        # Training
-        loop = tqdm.tqdm(enumerate(train_loader),total=len(train_loader),leave=True)
-        for idx, (seq, pred) in loop:
-            optimizer.zero_grad()
-            
-            seq = seq.to(device).to(dtype)
-            pred = pred.to(device).to(dtype)
-            
-            output = model(seq)
-            loss = criterion(output, pred)
-                
-            loss.backward()
-            optimizer.step()
-            
-            avg_loss += loss.cpu().item()
-            loop.set_description(f'Training Epoch [{epoch}/{config.epochs}]')
-            loop.set_postfix(loss=loss.item(), avg_loss=avg_loss/(idx+1))
-            train_loss = avg_loss/(idx+1)
-            
-        # Validation
-        model.eval()
-        avg_loss = 0
-        loop = tqdm.tqdm(enumerate(valid_loader),total=len(valid_loader),leave=True)
-        with torch.no_grad():
-            for idx, (seq, pred) in loop:
-                seq = seq.to(device).to(dtype)
-                pred = pred.to(device).to(dtype)
-                with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
-                    output = model(seq)
-                    loss = nn.MSELoss()(output, pred)
-                    
-                avg_loss += loss.cpu().item()
-                loop.set_description(f'Validation Epoch [{epoch}/{config.epochs}]')
-                loop.set_postfix(loss=loss.item(), avg_loss=avg_loss/(idx+1))
-                valid_loss = avg_loss/(idx+1)
-        
-        # Test 
-        avg_loss = 0
-        test_loss = 0
-        loop = tqdm.tqdm(enumerate(test_loader),total=len(test_loader),leave=True)
-        with torch.no_grad():
-            for idx, (seq, pred) in loop:
-                seq = seq.to(device).to(dtype)
-                pred = pred.to(device).to(dtype)
-                with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
-                    output = model(seq)
-                    loss = nn.MSELoss()(output, pred)
-                    
-                avg_loss += loss.cpu().item()
-                loop.set_description(f'Test Epoch [{epoch}/{config.epochs}]')
-                loop.set_postfix(loss=loss.item(), avg_loss=avg_loss/(idx+1))
-                test_loss = avg_loss/(idx+1)
-            
-        schedular.step()
-            
-        logger.info("[epoch: {}] train loss: {}, valid loss: {}, test loss: {}\n".format(epoch, train_loss, valid_loss, test_loss))
-    return 
 
 def train_oneset_mts(model, config, optimizer, schedular, criterion, dataset, model_save_path, dtype=torch.float32):
     """
@@ -199,7 +92,8 @@ def train_oneset_mts(model, config, optimizer, schedular, criterion, dataset, mo
     valid_loader = torch.utils.data.DataLoader(
         MTSDataset(dataset, config.seq_len, config.pred_len, phase="valid", train_prop=train_prop, valid_prop=valid_prop), 
         batch_size=config.batch_size * 2, 
-        shuffle=False
+        shuffle=False,
+        drop_last=True
     )
     
     test_loader = torch.utils.data.DataLoader(
@@ -212,12 +106,16 @@ def train_oneset_mts(model, config, optimizer, schedular, criterion, dataset, mo
     if not os.path.exists(model_save_path):
         os.makedirs(model_save_path)
 
+    early_stopper = EarlyStoppingBySlope(window_size=5, slope_threshold=-0.001, patience=5)
+
+    patience = 30
+    min_valid_loss = float('inf')
+    epochs_no_improve = 0
+    valid_losses = []
     test_losses = []
     maes = []
-    min_testloss = 100
     
     for epoch in range(config.epochs):
-        time_a = time.time()
         model.train(mode=True)
         train_loss, valid_loss, avg_loss = 0,0,0
         
@@ -240,13 +138,10 @@ def train_oneset_mts(model, config, optimizer, schedular, criterion, dataset, mo
             # loop.set_description(f'Training Epoch [{epoch}/{config.epochs}]')
             # loop.set_postfix(loss=loss.item(), avg_loss=avg_loss/(idx+1))
             train_loss = avg_loss/(idx+1)
-            
-        if epoch % 10 == 0:
-            print(f"time for training: {time.time()-time_a}")
+
         # Validation
         model.eval()
         avg_loss = 0
-        loop = tqdm.tqdm(enumerate(valid_loader),total=len(valid_loader),leave=True)
         loop = enumerate(valid_loader)
         with torch.no_grad():
             for idx, (seq, pred) in loop:
@@ -264,8 +159,8 @@ def train_oneset_mts(model, config, optimizer, schedular, criterion, dataset, mo
         # Test 
         avg_loss = 0
         test_loss = 0
-        loop = tqdm.tqdm(enumerate(test_loader),total=len(test_loader),leave=True)
-        # loop = enumerate(test_loader)
+        # loop = tqdm.tqdm(enumerate(test_loader),total=len(test_loader),leave=True)
+        loop = enumerate(test_loader)
         gts = []
         prs = []
         with torch.no_grad():
@@ -287,23 +182,32 @@ def train_oneset_mts(model, config, optimizer, schedular, criterion, dataset, mo
         gts = np.concatenate(gts, axis=0)
         test_loss = np.mean((prs - gts) ** 2)
         mae = np.mean(np.abs(prs - gts))
-        print(f"Epoch {epoch} test loss: {test_loss}, mae: {mae}")
+        with open(f"{model_save_path}/log.txt", "a") as f:
+            f.write(f"Epoch {epoch} test loss: {test_loss:.6f}, mae: {mae:.6f}, train_loss: {train_loss:.6f} valid loss: {valid_loss:.6f}\n")
+        # print(f"Epoch {epoch} test loss: {test_loss}, mae: {mae}, train_loss: {train_loss} valid loss: {valid_loss}")
         
         del prs, gts
         
         test_losses.append(test_loss)
         maes.append(mae)
 
-        
-        if test_loss < min_testloss:
-            min_testloss = test_loss
+        criterion_loss = valid_loss
+        if (criterion_loss) < min_valid_loss:
+            min_valid_loss = (criterion_loss)
+            epochs_no_improve = 0
             torch.save(model.state_dict(), f"{model_save_path}/best.pth")
-            
-        # logger.info("[epoch: {}] train loss: {}, valid loss: {}, test loss: {}\n".format(epoch, train_loss, valid_loss, test_loss))
+            print(f"Epoch {epoch} : Validation loss decreased, update best model...")
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= patience:
+                print(f"Early stopping at epoch {epoch}.\n")
+                break
+
+        valid_losses.append(criterion_loss)
     
     # find the min test loss and index
-    test_losses = np.array(test_losses)
-    min_idx = np.argmin(test_losses)
+    valid_losses = np.array(valid_losses)
+    min_idx = np.argmin(valid_losses)
     with open(f"{model_save_path}/log.txt", "a") as f:
-        f.write(f"Epoch: {min_idx}, Min Test loss: {test_losses[min_idx]}, MAE:{maes[min_idx]}\n\n")
+        f.write(f"\n\n===Best Results===\nBest Result: Epoch: {min_idx}, Test loss: {test_losses[min_idx]}, MAE:{maes[min_idx]}\n")
     return 
