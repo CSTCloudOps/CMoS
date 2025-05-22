@@ -150,8 +150,12 @@ def train_oneset_mts(model, config, optimizer, schedular, criterion, dataset, mo
                 with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
                     output = model(seq)
                     loss = nn.MSELoss()(output, pred)
-                    
-                avg_loss += loss.cpu().item()
+                    mae_loss = nn.L1Loss()(output, pred)
+                
+                if dataset[0] == "ETTh1":
+                    avg_loss += mae_loss.cpu().item()
+                else:
+                    avg_loss += loss.cpu().item()
                 # loop.set_description(f'Validation Epoch [{epoch}/{config.epochs}]')
                 # loop.set_postfix(loss=loss.item(), avg_loss=avg_loss/(idx+1))
                 valid_loss = avg_loss/(idx+1)
@@ -184,7 +188,7 @@ def train_oneset_mts(model, config, optimizer, schedular, criterion, dataset, mo
         mae = np.mean(np.abs(prs - gts))
         with open(f"{model_save_path}/log.txt", "a") as f:
             f.write(f"Epoch {epoch} test loss: {test_loss:.6f}, mae: {mae:.6f}, train_loss: {train_loss:.6f} valid loss: {valid_loss:.6f}\n")
-        # print(f"Epoch {epoch} test loss: {test_loss}, mae: {mae}, train_loss: {train_loss} valid loss: {valid_loss}")
+
         
         del prs, gts
         
