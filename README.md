@@ -5,10 +5,11 @@ The repo is the official implementation for the paper: CMoS: Rethinking Time Ser
 
 ## Introduction
 
-CMoS is a super-lightweight model (1%～20% of DLinear's parameter count) designed for long-term multivariate time series prediction. 
+🌟CMoS is a super-lightweight model (1%～20% of DLinear's parameter count) designed for long-term multivariate time series prediction. 
 Two techniques are introduced to achieve better performance and robustness with fewer model parameters:
-1. **Chunk-wise spatial correlation modeling**. Both input series and series to be predicted are split into chunks, and CMoS focuses on modeling the relationships between these input and output chunks via mapping matrices. This technique carries performance and efficiency advantages theoretically and empirically.
-2. **Correlation Mixing**. We decompose the spatial correlation matrix of each time series into a combination of several foundational matrices, which are shared across all time series. In a system comprising n time series, this strategy enables the model to capture diverse temporal patterns while reducing the parameter complexity from beyond O(n) to O(1). Additionally, the learned foundational matrices offer strong interpretability, aiding in the discovery of key temporal dynamics in the system.
+1. ***Chunk-wise spatial correlation modeling***. Both input series and series to be predicted are split into chunks, and CMoS focuses on modeling the relationships between these input and output chunks via mapping matrices. This technique carries performance and efficiency advantages theoretically and empirically.
+
+2. ***Correlation Mixing***. We decompose the spatial correlation matrix of each time series into a combination of several foundational matrices, which are shared across all time series. In a system comprising n time series, this strategy enables the model to capture diverse temporal patterns while reducing the parameter complexity from beyond O(n) to O(1). Additionally, the learned foundational matrices offer strong interpretability, aiding in the discovery of key temporal dynamics in the system.
 
 
 Additionally, we propose **Periodictiy Injection** technique. By directly editing the initial weights of one foundation correlation matrix, we can inject some priori period knowledge to the model. This makes CMoS more easier to model the periodic spatial correlations, thereby speeding up convergence and enhancing the performance for time series with great periodicity.
