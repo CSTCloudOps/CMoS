@@ -1,5 +1,5 @@
 # CMoS: Rethinking Time Series Prediction Through the Lens of Chunk-wise Spatial Correlations
-The repo is the official implementation for the paper: CMoS: Rethinking Time Series Prediction Through the Lens of Chunk-wise Spatial Correlations (ICML'25).
+The repo is the official implementation for the paper: [CMoS: Rethinking Time Series Prediction Through the Lens of Chunk-wise Spatial Correlations](https://arxiv.org/pdf/2505.19090) (ICML'25).
 
 ![image.png](figs/model1.png)
 
