@@ -29,7 +29,11 @@ if __name__ == "__main__":
     cmdargs = parser.parse_args()
     dataset = cmdargs.dataset
 
-    config = toml.load("./configs/{}.toml".format(dataset))["config"]
+    # check if specified config exists
+    if os.path.exists("./configs/{}_{}.toml".format(dataset, cmdargs.pred_len)):
+        config = toml.load("./configs/{}_{}.toml".format(dataset, cmdargs.pred_len))["config"]
+    else:
+        config = toml.load("./configs/{}.toml".format(dataset))["config"]
     
     config["pred_len"] = cmdargs.pred_len
     args = argparse.Namespace(**config)

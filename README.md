@@ -46,12 +46,12 @@ pip install -r requirements.txt
 ```
 
 ### Scripts
-You can run the example script for each dataset to validate the environment. For example, for electricity dataset, you can run the following script:
+You can use the following script to obtain the prediction results (Recommended). For example, for electricity dataset, you can run the following script:
 ```
 ./scripts/electricity.sh
 ```
 
-To get the best result, run the grid search script for each dataset (e.g. electricity):
+For **ultra** prediction result, run the grid search script for each dataset (e.g. electricity). This might take a relatively long time. 
 ```
 ./scripts/electricity_search_best.sh
 ```

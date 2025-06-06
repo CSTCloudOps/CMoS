@@ -1,0 +1,17 @@
+[config]
+seq_len = 336
+pred_len = 336
+seg_size = 24
+dropout = 0.05
+num_map = 4
+kernel_size = 8
+conv_stride = 4
+c = 7
+topk = -1
+epochs = 200
+lr = 8e-5
+batch_size = 64
+step_size = 20
+gamma = 0.75
+period = 24
+use_pi = true
