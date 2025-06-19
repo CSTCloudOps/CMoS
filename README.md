@@ -36,6 +36,23 @@ We visualized four spatial correlation matrices, which are also referred to as c
 </p>
 
 ## Getting Started
+### Fetching data
+We have included the data in our repo. To fetch the data, please install git-lfs first, and then clone this repo.
+```shell
+# Debian-based OS
+sudo apt install git-lfs
+
+# initialize git lfs
+git lfs install
+
+# fetch data
+git clone https://github.com/CSTCloudOps/CMoS.git
+
+# or manually  pull data
+git lfs pull origin main
+
+```
+
 ### Enviroment
 Conda is recommended to create a virtual environment for this repo:
 ```
