@@ -25,7 +25,7 @@ Additionally, we propose **Periodictiy Injection** technique. By directly editin
 Comparison of the prediction performance and parameter count between CMoS and other baselines on Electricity dataset with horizon=192.
 
 <p align="center">
-<img src="figs/effic.png" width="80%">
+<img src="figs/image_copy.png" width="100%">
 </p>
 
 ## Interpretability
